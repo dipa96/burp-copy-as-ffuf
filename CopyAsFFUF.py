@@ -62,6 +62,8 @@ class BurpExtender(IBurpExtender, IContextMenuFactory, IHttpRequestResponse):
                 # add body
                 ffuf_cmd += " -d \"{}\"".format((request_lines[-1]))
                 break
+            else:
+                pass
 
         return ffuf_cmd
 
