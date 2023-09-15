@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 from burp import IBurpExtender, IContextMenuFactory, IHttpRequestResponse
 from java.io import PrintWriter
 from java.util import ArrayList
@@ -28,18 +29,39 @@ class BurpExtender(IBurpExtender, IContextMenuFactory, IHttpRequestResponse):
         host = host_header[len("Host:"):].strip()
         port = "80" if protocol == "HTTP/1.1" else "443"
 
-        # construct the FFUF command
-        url_prefix = "https" if port != "80" else "http"
-        url = "{}://{}/{}".format(url_prefix, host, path.lstrip("/"))
-        ffuf_cmd = "ffuf -w your-wordlist -X {} -u '{}FUZZ'".format(method, url)
-
         # extract headers and add them to FFUF command
         headers = [header for header in request_lines[1:] if not header.startswith("Host:")]
         for header in headers:
             header_parts = header.split(':', 1)
             if len(header_parts) == 2:
                 header_name, header_value = header_parts
-                ffuf_cmd += " -H '{}:{}'".format(header_name.strip(), header_value.strip())
+                ffuf_cmd = "ffuf -H '{}:{}'".format(header_name.strip(), header_value.strip())
+        
+        http_request_method = [ 
+                                # "HEAD", 
+                                # "GET", 
+                                # "CONNECT", 
+                                "POST", 
+                                "PUT", 
+                                "PATCH", 
+                                # "DELETE", 
+                                # "CONNECT", 
+                                # "OPTIONS", 
+                                # "TRACE"
+                            ]
+
+        # construct the FFUF command
+        url_prefix = "https" if port != "80" else "http"
+        url = "{}://{}/{}".format(url_prefix, host, path.lstrip("/"))
+        ffuf_cmd += " -X {} -u '{}' -w /usr/share/seclists/".format(method, url)
+
+        # Check if body exist and add to ffuf cmd
+        for method in http_request_method:
+            index = request_lines[0].find(method)
+            if index == 0:
+                # add body
+                ffuf_cmd += " -d \"{}\"".format((request_lines[-1]))
+                break
 
         return ffuf_cmd
 
